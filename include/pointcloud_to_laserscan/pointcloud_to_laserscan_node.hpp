@@ -95,6 +95,7 @@ private:
     range_max_;
   bool use_inf_;
   double inf_epsilon_;
+  rclcpp::Clock::SharedPtr clock_ptr;
 };
 
 }  // namespace pointcloud_to_laserscan

@@ -20,11 +20,7 @@ def generate_launch_description():
             package='tf2_ros',
             executable='static_transform_publisher',
             name='static_transform_publisher',
-            arguments=[
-                '--x', '0', '--y', '0', '--z', '0',
-                '--qx', '0', '--qy', '0', '--qz', '0', '--qw', '1',
-                '--frame-id', 'map', '--child-frame-id', 'cloud'
-            ]
+            arguments=['0', '0', '0', '0', '0', '0', '1', 'map', 'cloud']
         ),
         Node(
             package='pointcloud_to_laserscan', executable='pointcloud_to_laserscan_node',
@@ -33,14 +29,14 @@ def generate_launch_description():
             parameters=[{
                 'target_frame': 'cloud',
                 'transform_tolerance': 0.01,
-                'min_height': 0.0,
+                'min_height': 0.16,
                 'max_height': 1.0,
-                'angle_min': -1.5708,  # -M_PI/2
-                'angle_max': 1.5708,  # M_PI/2
+                'angle_min': -3.142, #-1.5708,  -M_PI/2
+                'angle_max': 3.142, #1.5708,  M_PI/2
                 'angle_increment': 0.0087,  # M_PI/360.0
                 'scan_time': 0.3333,
                 'range_min': 0.45,
-                'range_max': 4.0,
+                'range_max': 8.0,
                 'use_inf': True,
                 'inf_epsilon': 1.0
             }],

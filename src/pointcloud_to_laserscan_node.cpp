@@ -49,7 +49,7 @@
 #include <utility>
 
 #include "sensor_msgs/point_cloud2_iterator.hpp"
-#include "tf2_sensor_msgs/tf2_sensor_msgs.hpp"
+#include "tf2_sensor_msgs/tf2_sensor_msgs.h"
 #include "tf2_ros/create_timer_ros.h"
 
 namespace pointcloud_to_laserscan
@@ -58,6 +58,7 @@ namespace pointcloud_to_laserscan
 PointCloudToLaserScanNode::PointCloudToLaserScanNode(const rclcpp::NodeOptions & options)
 : rclcpp::Node("pointcloud_to_laserscan", options)
 {
+  clock_ptr = this->get_clock();
   target_frame_ = this->declare_parameter("target_frame", "");
   tolerance_ = this->declare_parameter("transform_tolerance", 0.01);
   // TODO(hidmic): adjust default input queue size based on actual concurrency levels
@@ -68,18 +69,21 @@ PointCloudToLaserScanNode::PointCloudToLaserScanNode(const rclcpp::NodeOptions &
   max_height_ = this->declare_parameter("max_height", std::numeric_limits<double>::max());
   angle_min_ = this->declare_parameter("angle_min", -M_PI);
   angle_max_ = this->declare_parameter("angle_max", M_PI);
-  angle_increment_ = this->declare_parameter("angle_increment", M_PI / 180.0);
+  angle_increment_ = this->declare_parameter("angle_increment", M_PI / (180.0*4));
   scan_time_ = this->declare_parameter("scan_time", 1.0 / 30.0);
   range_min_ = this->declare_parameter("range_min", 0.0);
   range_max_ = this->declare_parameter("range_max", std::numeric_limits<double>::max());
   inf_epsilon_ = this->declare_parameter("inf_epsilon", 1.0);
   use_inf_ = this->declare_parameter("use_inf", true);
 
-  pub_ = this->create_publisher<sensor_msgs::msg::LaserScan>("scan", rclcpp::SensorDataQoS());
+  pub_ = this->create_publisher<sensor_msgs::msg::LaserScan>("scan", rclcpp::SensorDataQoS().reliable());
+  //pub_ = this->create_publisher<sensor_msgs::msg::LaserScan>("scan", rclcpp::SensorDataQoS()); //default
+
 
   using std::placeholders::_1;
   // if pointcloud target frame specified, we need to filter by transform availability
-  if (!target_frame_.empty()) {
+  // if (!target_frame_.empty()) {
+    if (0) {
     tf2_ = std::make_unique<tf2_ros::Buffer>(this->get_clock());
     auto timer_interface = std::make_shared<tf2_ros::CreateTimerROS>(
       this->get_node_base_interface(), this->get_node_timers_interface());
@@ -120,7 +124,8 @@ void PointCloudToLaserScanNode::subscriptionListenerThreadLoop()
           "Got a subscriber to laserscan, starting pointcloud subscriber");
         rclcpp::SensorDataQoS qos;
         qos.keep_last(input_queue_size_);
-        sub_.subscribe(this, "cloud_in", qos.get_rmw_qos_profile());
+        //sub_.subscribe(this, "cloud_in", qos.get_rmw_qos_profile()); 
+        sub_.subscribe(this, "cloud_in", qos.get_rmw_qos_profile()); ///lio_sam_ros2/deskew/cloud_deskewed
       }
     } else if (sub_.getSubscriber()) {
       RCLCPP_INFO(
@@ -139,7 +144,10 @@ void PointCloudToLaserScanNode::cloudCallback(
 {
   // build laserscan output
   auto scan_msg = std::make_unique<sensor_msgs::msg::LaserScan>();
-  scan_msg->header = cloud_msg->header;
+  // scan_msg->header = cloud_msg->header;
+  rclcpp::Time now = clock_ptr->now();
+  scan_msg->header.stamp.sec = now.seconds();
+  scan_msg->header.stamp.nanosec = now.nanoseconds() % 1000000000;
   if (!target_frame_.empty()) {
     scan_msg->header.frame_id = target_frame_;
   }
